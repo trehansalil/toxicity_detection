@@ -4,7 +4,7 @@ import inspect
 from zipfile import ZipFile
 from toxic.logger import logging
 from toxic.exception import CustomException
-from toxic.configuration.gcloud_syncer import GCloudSync
+from toxic.configuration.configuration import GCloudSync
 from toxic.entity.config_entity import DataIngestionConfig
 from toxic.entity.artifact_entity import DataIngestionArtifacts
 
