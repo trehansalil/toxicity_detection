@@ -19,4 +19,4 @@ logging.basicConfig(
     ]
 )
 
-logger = logging.getLogger("Toxic_Logger")
+logging = logging.getLogger("Toxic_Logger")

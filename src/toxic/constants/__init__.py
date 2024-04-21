@@ -1,7 +1,10 @@
 import os
 
 from datetime import datetime
+from pathlib import Path
 
+CONFIG_FILE_PATH = Path("config/config.yaml")
+PARAMS_FILE_PATH = Path("params.yaml")
 
 # common constants
 TIMESTAMP: str = datetime.now().strftime("%m_%d_%Y_%H_%M_%S")
