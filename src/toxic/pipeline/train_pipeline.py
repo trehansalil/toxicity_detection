@@ -3,7 +3,7 @@ import sys
 from toxic.logger import logging
 from toxic.exception import CustomException
 from toxic.components.data_ingestion import DataIngestion
-from toxic.components.data_validation import DataValidation
+from toxic.components.prepare_base_model import DataValidation
 from toxic.components.data_transformation import DataTransformation
 from toxic.components.model_evaluation import ModelEvaluation
 from toxic.components.model_pusher import ModelPusher
