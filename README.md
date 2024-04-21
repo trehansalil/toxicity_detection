@@ -166,11 +166,3 @@ source env/bin/activate
 ```bash
 pip install -r requirements.txt
 ```
-- Gcloud Setup for Linux
-```bash
-bash gcloud_installer.sh
-```
-- Gcloud CLI Initialize
-```bash
-gcloud init
-```
