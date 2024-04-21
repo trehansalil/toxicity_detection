@@ -1,13 +1,14 @@
-from hate.pipeline.train_pipeline import TrainingPipeline
+from src.toxic.pipeline.train_pipeline import TrainingPipeline
 from fastapi import FastAPI
 import uvicorn
 import sys
 from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse
 from fastapi.responses import Response
-from hate.pipeline.prediction_pipeline import PredictionPipeline
-from hate.exception import CustomException
-from hate.constants import *
+from src.toxic.pipeline.prediction_pipeline import PredictionPipeline
+from src.toxic.exception import CustomException
+from src.toxic.constants import *
+from toxic import logger
 
 
 text:str = "What is machine learing?"

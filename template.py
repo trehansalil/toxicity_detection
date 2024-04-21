@@ -9,6 +9,7 @@ project_name = "toxic"
 
 list_of_files = [
     ".github/workflows/.gitkeep",
+    f'src/{project_name}/__init__.py',
     f'src/{project_name}/components/__init__.py',
     f'src/{project_name}/components/data_ingestion.py',
     f'src/{project_name}/components/data_transformation.py',
@@ -29,6 +30,8 @@ list_of_files = [
     f'src/{project_name}/pipeline/prediction_pipeline.py',      
     f'src/{project_name}/ml/__init__.py',      
     f'src/{project_name}/ml/model.py',   
+    f'src/{project_name}/utils/__init__.py',
+    f'src/{project_name}/utils/common.py',
     "config/config.yaml",
     "dvc.yaml",
     "params.yaml",

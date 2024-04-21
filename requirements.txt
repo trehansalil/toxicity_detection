@@ -1,4 +1,3 @@
-tensorflow==2.12.0
 gdown
 dvc
 mlflow==2.2.2
@@ -15,7 +14,7 @@ Flask
 Flask-Cors
 numpy
 pandas
-pytorch
+torch
 seaborn
 nltk
 regex
