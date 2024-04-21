@@ -27,8 +27,12 @@ class ConfigurationManager:
         data_ingestion_config = DataIngestionConfig(
             root_dir=config.root_dir,
             source_url=config.source_url,
-            local_data_file=config.local_data_file,
-            unzip_dir=config.unzip_dir 
+            unzip_dir=config.unzip_dir,
+            train_file=config.train_file,
+            test_file=config.test_file,
+            labels_file=config.labels_file,
+            sample_sub_file=config.sample_sub_file,
+            bert_uncased=config.bert_uncased
         )
 
         return data_ingestion_config

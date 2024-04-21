@@ -6,8 +6,12 @@ import os
 class DataIngestionConfig:
     root_dir: Path
     source_url: str
-    local_data_file: Path
     unzip_dir: Path
+    train_file: str
+    test_file: str
+    labels_file: str
+    sample_sub_file: str
+    bert_uncased: Path
 
 
 @dataclass(frozen=True)

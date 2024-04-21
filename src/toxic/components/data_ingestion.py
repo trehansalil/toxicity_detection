@@ -19,9 +19,9 @@ class DataIngestion:
             logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")
             # os.makedirs(self.data_ingestion_config.DATA_INGESTION_ARTIFACTS_DIR, exist_ok=True)
             dataset_url = self.data_ingestion_config.source_url
-            zip_download_dir = self.data_ingestion_config.local_data_file
-            os.makedirs("artifacts/data_ingestion", exist_ok=True)
-            logging.info(f"Downloading data from {dataset_url} into file {zip_download_dir}")
+            unzip_dir = self.data_ingestion_config.unzip_dir
+            os.makedirs(self.data_ingestion_config.root_dir, exist_ok=True)
+            logging.info(f"Downloading data from {dataset_url} into folder {unzip_dir}")
 
             self.kagglesync.sync_folder_from_kaggle(
                 self.data_ingestion_config.source_url,
@@ -29,13 +29,15 @@ class DataIngestion:
                 # self.data_ingestion_config.DATA_INGESTION_ARTIFACTS_DIR,
             )
 
-            logging.info(f"Downloaded data from {dataset_url} into file {zip_download_dir}")            
+            logging.info(f"Downloaded data from {dataset_url} into folder {unzip_dir}")            
             
 
 
             logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
         except Exception as e:
             raise e
+        
+        return self.data_ingestion_config
 
     # def unzip_and_clean(self):
     #     current_function_name = inspect.stack()[0][3]

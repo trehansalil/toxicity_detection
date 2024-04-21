@@ -6,10 +6,15 @@ from urllib.parse import unquote, urlparse
 from urllib.error import HTTPError
 from zipfile import ZipFile
 import shutil
+from src.toxic.configuration.configuration import ConfigurationManager
+
+config = ConfigurationManager()
+ingestion_config = config.get_data_ingestion_config()
+dir, sub_dir = ingestion_config.root_dir.split("/")
 
 CHUNK_SIZE = 40960
-KAGGLE_INPUT_PATH=os.path.join(os.getcwd(), "artifacts", "data_ingestion")
-KAGGLE_WORKING_PATH=os.path.join(os.getcwd(), "artifacts", "data_ingestion")
+KAGGLE_INPUT_PATH=os.path.join(os.getcwd(), dir, sub_dir)
+KAGGLE_WORKING_PATH=os.path.join(os.getcwd(), dir, sub_dir)
 KAGGLE_SYMLINK='kaggle'
 
 # !umount /kaggle/input/ 2> /dev/null
@@ -22,7 +27,7 @@ class KaggleSync:
     def sync_folder_from_kaggle(self, DATA_SOURCE_MAPPING):
         
         try:
-            os.symlink(KAGGLE_INPUT_PATH, os.path.join(".", "artifacts", 'data_ingestion'), target_is_directory=True)
+            os.symlink(KAGGLE_INPUT_PATH, os.path.join(".", dir, sub_dir), target_is_directory=True)
         except FileExistsError:
             pass
 
