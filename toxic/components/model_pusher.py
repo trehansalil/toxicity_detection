@@ -1,10 +1,10 @@
 import sys
 import inspect
-from hate.logger import logging
-from hate.exception import CustomException
-from hate.configuration.gcloud_syncer import GCloudSync
-from hate.entity.config_entity import ModelPusherConfig
-from hate.entity.artifact_entity import ModelPusherArtifacts
+from toxic.logger import logging
+from toxic.exception import CustomException
+from toxic.configuration.gcloud_syncer import GCloudSync
+from toxic.entity.config_entity import ModelPusherConfig
+from toxic.entity.artifact_entity import ModelPusherArtifacts
 
 class ModelPusher:
     def __init__(self, model_pusher_config: ModelPusherConfig):

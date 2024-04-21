@@ -1,25 +1,25 @@
 import inspect
 import sys
-from hate.logger import logging
-from hate.exception import CustomException
-from hate.components.data_ingestion import DataIngestion
-from hate.components.data_validation import DataValidation
-from hate.components.data_transformation import DataTransformation
-from hate.components.model_evaluation import ModelEvaluation
-from hate.components.model_pusher import ModelPusher
-from hate.entity.config_entity import (DataIngestionConfig, 
+from toxic.logger import logging
+from toxic.exception import CustomException
+from toxic.components.data_ingestion import DataIngestion
+from toxic.components.data_validation import DataValidation
+from toxic.components.data_transformation import DataTransformation
+from toxic.components.model_evaluation import ModelEvaluation
+from toxic.components.model_pusher import ModelPusher
+from toxic.entity.config_entity import (DataIngestionConfig, 
                                        DataValidationConfig, 
                                        DataTransformationConfig, 
                                        ModelTrainerConfig, 
                                        ModelEvaluationConfig, 
                                        ModelPusherConfig)
-from hate.entity.artifact_entity import (DataIngestionArtifacts, 
+from toxic.entity.artifact_entity import (DataIngestionArtifacts, 
                                          DataValidationArtifacts, 
                                          DataTransformationArtifacts, 
                                          ModelTrainerArtifacts,
                                          ModelEvaluationArtifacts, 
                                          ModelPusherArtifacts)
-from hate.components.model_trainer import ModelTrainer
+from toxic.components.model_trainer import ModelTrainer
 
 class TrainingPipeline:
     def __init__(self):

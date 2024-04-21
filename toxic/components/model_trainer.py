@@ -8,15 +8,15 @@ import inspect
 from nltk.corpus import stopwords
 from sklearn.model_selection import train_test_split
 nltk.download('stopwords')
-from hate.logger import logging
-from hate.exception import CustomException
-from hate.entity.config_entity import DataTransformationConfig, ModelTrainerConfig
-from hate.entity.artifact_entity import DataTransformationArtifacts, DataIngestionArtifacts, DataValidationArtifacts, ModelTrainerArtifacts
+from toxic.logger import logging
+from toxic.exception import CustomException
+from toxic.entity.config_entity import DataTransformationConfig, ModelTrainerConfig
+from toxic.entity.artifact_entity import DataTransformationArtifacts, DataIngestionArtifacts, DataValidationArtifacts, ModelTrainerArtifacts
 from keras.preprocessing.text import Tokenizer
 import tensorflow as tf
 from keras.utils import pad_sequences
-from hate.ml.model import ModelArchitecture
-from hate.constants import *
+from toxic.ml.model import ModelArchitecture
+from toxic.constants import *
 
 class ModelTrainer:
     def __init__(self, model_trainer_config: ModelTrainerConfig, 

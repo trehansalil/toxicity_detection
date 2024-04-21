@@ -2,10 +2,10 @@ import os
 import sys
 import inspect
 import pandas as pd
-from hate.logger import logging
-from hate.exception import CustomException
-from hate.entity.config_entity import DataValidationConfig
-from hate.entity.artifact_entity import DataValidationArtifacts
+from toxic.logger import logging
+from toxic.exception import CustomException
+from toxic.entity.config_entity import DataValidationConfig
+from toxic.entity.artifact_entity import DataValidationArtifacts
 
 
 class DataValidation:

@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from hate.constants import *
+from toxic.constants import *
 import os
 
 @dataclass

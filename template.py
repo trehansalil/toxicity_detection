@@ -5,9 +5,10 @@ import logging
 logging.basicConfig(level=logging.INFO, format='[%(asctime)s]: %(message)s:')
 
 
-project_name = "hate"
+project_name = "toxic"
 
 list_of_files = [
+    ".github/workflows/.gitkeep",
     f'{project_name}/components/__init__.py',
     f'{project_name}/components/data_ingestion.py',
     f'{project_name}/components/data_transformation.py',
@@ -16,7 +17,7 @@ list_of_files = [
     f'{project_name}/components/model_evaluation.py',
     f'{project_name}/components/model_pusher.py',
     f'{project_name}/configuration/__init__.py',
-    f'{project_name}/configuration/gcloud_syncer.py',
+    f'{project_name}/configuration/configuration.py',
     f'{project_name}/constants/__init__.py',    
     f'{project_name}/entity/__init__.py',    
     f'{project_name}/entity/config_entity.py',   
@@ -27,12 +28,16 @@ list_of_files = [
     f'{project_name}/pipeline/train_pipeline.py',  
     f'{project_name}/pipeline/prediction_pipeline.py',      
     f'{project_name}/ml/__init__.py',      
-    f'{project_name}/ml/model.py',      
+    f'{project_name}/ml/model.py',   
+    "config/config.yaml",
+    "dvc.yaml",
+    "params.yaml",
     'app.py',
-    'demo.py',
     'requirements.txt', 
     'Dockerfile',
     'setup.py',
+    "research/experimental_work_.ipynb",
+    "templates/index.html",
     '.dockerignore'
 ]
 

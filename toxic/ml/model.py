@@ -1,10 +1,10 @@
-from hate.entity.config_entity import ModelTrainerConfig
+from toxic.entity.config_entity import ModelTrainerConfig
 from keras.models import Sequential
 from keras.optimizers import RMSprop
 from keras.callbacks import EarlyStopping, ModelCheckpoint
 from keras.layers import LSTM, Activation, Dense, Dropout, Input, Embedding, SpatialDropout1D
 
-from hate.constants import *
+from toxic.constants import *
 
 class ModelArchitecture:
     def __init__(self):
