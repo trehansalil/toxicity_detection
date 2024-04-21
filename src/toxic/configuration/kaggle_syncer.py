@@ -8,8 +8,8 @@ from zipfile import ZipFile
 import shutil
 
 CHUNK_SIZE = 40960
-KAGGLE_INPUT_PATH=os.getcwd()+'/kaggle/input'
-KAGGLE_WORKING_PATH=os.getcwd()+'/kaggle/working'
+KAGGLE_INPUT_PATH=os.path.join(os.getcwd(), "artifacts", "data_ingestion")
+KAGGLE_WORKING_PATH=os.path.join(os.getcwd(), "artifacts", "data_ingestion")
 KAGGLE_SYMLINK='kaggle'
 
 # !umount /kaggle/input/ 2> /dev/null
@@ -22,13 +22,10 @@ class KaggleSync:
     def sync_folder_from_kaggle(self, DATA_SOURCE_MAPPING):
         
         try:
-            os.symlink(KAGGLE_INPUT_PATH, os.path.join("..", 'input'), target_is_directory=True)
+            os.symlink(KAGGLE_INPUT_PATH, os.path.join(".", "artifacts", 'data_ingestion'), target_is_directory=True)
         except FileExistsError:
             pass
-        try:
-            os.symlink(KAGGLE_WORKING_PATH, os.path.join("..", 'working'), target_is_directory=True)
-        except FileExistsError:
-            pass
+
 
         for data_source_mapping in DATA_SOURCE_MAPPING.split(','):
             directory, download_url_encoded = data_source_mapping.split(':')
@@ -63,8 +60,3 @@ class KaggleSync:
                 continue
 
         print('Data source import complete.')
-        
-    def sync_folder_from_gcloud(self, gcp_bucket_url, filename, destination):
-        
-        command = f"gsutil cp gs://{gcp_bucket_url}/{filename} {destination}/{filename}"
-        os.system(command)

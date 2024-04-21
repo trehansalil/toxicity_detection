@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from toxic.constants import *
+from src.toxic.constants import *
 import os
 
 @dataclass(frozen=True)

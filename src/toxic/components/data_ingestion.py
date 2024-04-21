@@ -2,10 +2,10 @@ import os
 import zipfile
 import gdown
 import inspect
-from toxic import logging
-from toxic.utils.common import get_size
-from toxic.entity.config_entity import DataIngestionConfig
-from toxic.configuration.configuration import KaggleSync
+from src.toxic import logging
+from src.toxic.utils.common import get_size
+from src.toxic.entity.config_entity import DataIngestionConfig
+from src.toxic.configuration.kaggle_syncer import KaggleSync
 
 
 class DataIngestion:
@@ -18,13 +18,13 @@ class DataIngestion:
         try:
             logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")
             # os.makedirs(self.data_ingestion_config.DATA_INGESTION_ARTIFACTS_DIR, exist_ok=True)
-            dataset_url = self.data_ingestion_config.source_URL
+            dataset_url = self.data_ingestion_config.source_url
             zip_download_dir = self.data_ingestion_config.local_data_file
             os.makedirs("artifacts/data_ingestion", exist_ok=True)
             logging.info(f"Downloading data from {dataset_url} into file {zip_download_dir}")
 
-            self.kagglesync.sync_folder_from_gcloud(
-                self.data_ingestion_config.source_URL,
+            self.kagglesync.sync_folder_from_kaggle(
+                self.data_ingestion_config.source_url,
                 # self.data_ingestion_config.ZIP_FILE_NAME,
                 # self.data_ingestion_config.DATA_INGESTION_ARTIFACTS_DIR,
             )

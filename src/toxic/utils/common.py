@@ -1,7 +1,7 @@
 import os
 from box.exceptions import BoxValueError
 import yaml
-from toxic import logging
+from src.toxic import logging
 import json
 import joblib
 from ensure import ensure_annotations
