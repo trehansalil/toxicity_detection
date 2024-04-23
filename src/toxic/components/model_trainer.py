@@ -1,67 +1,275 @@
 import os
-import pickle
-import sys
+import random
 import inspect
-import pandas as pd
-import nltk
+import dagshub
+import mlflow
+import numpy as np
 import inspect
-from nltk.corpus import stopwords
-from sklearn.model_selection import train_test_split
-nltk.download('stopwords')
-from toxic.logger import logging
-from toxic.exception import CustomException
-from toxic.entity.config_entity import DataTransformationConfig, ModelTrainerConfig
-from toxic.entity.artifact_entity import DataTransformationArtifacts, DataIngestionArtifacts, DataValidationArtifacts, ModelTrainerArtifacts
-from keras.preprocessing.text import Tokenizer
-import tensorflow as tf
-from keras.utils import pad_sequences
-from toxic.ml.model import ModelArchitecture
-from toxic.constants import *
+import torch
+from tqdm import tqdm
+from src.toxic import logging
+from src.toxic.entity.config_entity import TrainingConfig
+from src.toxic.constants import *
+from tqdm import tqdm
+import transformers
+
+import torch.nn as nn
+import torch
+from transformers import AdamW, get_linear_schedule_with_warmup
+from torch.utils.data import DataLoader
+from typing import List
 
 class ModelTrainer:
-    def __init__(self, model_trainer_config: ModelTrainerConfig, 
-                 data_transformation_artifacts: DataTransformationArtifacts):
-        self.model_trainer_config = model_trainer_config
-        self.data_transformation_artifacts = data_transformation_artifacts
+    def __init__(
+            self, 
+            model_trainer_config: TrainingConfig, 
+            train_dataloader_list: List[DataLoader], 
+            validation_dataloader_list: List[DataLoader]
+        ):
+        self.config = model_trainer_config
         
-    def splitting_data(self, csv_path):
+        self.best_score = 1000
+        
+        mlflow.log_param('fold', self.config.params_fold)
+        mlflow.log_param('num_workers', self.config.params_num_workers)
+        mlflow.log_param('pin_memory', self.config.params_pin_memory)
+        mlflow.log_param('beta1', self.config.params_beta1)
+        mlflow.log_param('beta2', self.config.params_beta2)
+        mlflow.log_param('weight_decay', self.config.params_weight_decay)
+        mlflow.log_param('best_score', self.best_score)
+        mlflow.log_param('Learning_rate', self.config.params_learning_rate)   
+        
+        self.max_len = self.config.params_max_len  
+        self.remote_server_uri = self.config.dagshub_mlflow_remote_uri
+        
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        
+        dagshub.init(
+            repo_owner='trehansalil', 
+            repo_name='toxicity_detection', 
+            mlflow=True
+        )       
+        
+        self.train_dataloader_list = train_dataloader_list 
+        self.validation_dataloader_list = validation_dataloader_list 
+        
+        self.best_model_path = os.path.join(self.config.root_dir, "model.pth")
+        
+    def random_seed(self, SEED):
+        random.seed(SEED)
+        os.environ['PYTHONHASHSEED'] = str(SEED)
+        np.random.seed(SEED)
+        torch.manual_seed(SEED)
+        torch.cuda.manual_seed(SEED)
+        torch.cuda.manual_seed_all(SEED)
+        torch.backends.cudnn.deterministic = True  
+    
+        
+    def training(self, train_dataloader):
         current_function_name = inspect.stack()[0][3]
-        logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")
-        try:        
-            df = pd.read_csv(csv_path, index_col=False)
-            logging.info("Splitting the data into x & y")
-            x = df[TWEET].astype(str)
-            y = df[LABEL]
+        logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")        
+        try:
+            self.model.train()
+            torch.backends.cudnn.benchmark = True
+            correct_predictions = 0
+
+            for a in train_dataloader:
+                losses = []
+                self.optimizer.zero_grad()
+
+                #allpreds = []
+                #alltargets = []
+
+                with torch.cuda.amp.autocast():
+
+                    ids = a['ids'].to(self.device, non_blocking = True)
+                    mask = a['mask'].to(self.device, non_blocking = True)
+
+                    output = self.model(ids, mask) #This gives model as output, however we want the values at the output
+                    output = output['logits'].squeeze(-1).to(torch.float32)
+
+                    output_probs = torch.sigmoid(output)
+                    preds = torch.where(output_probs > 0.5, 1, 0)
+
+                    toxic_label = a['toxic_label'].to(self.device, non_blocking = True)
+                    loss = self.loss_fn(output, toxic_label)
+
+                    losses.append(loss.item())
+                    #allpreds.append(output.detach().cpu().numpy())
+                    #alltargets.append(toxic.detach().squeeze(-1).cpu().numpy())
+                    correct_predictions += torch.sum(preds == toxic_label)
+
+                self.scaler.scale(loss).backward() #Multiplies (‘scales’) a tensor or list of tensors by the scale factor.
+                                            #Returns scaled outputs. If this instance of GradScaler is not enabled, outputs are returned unmodified.
+                self.scaler.step(self.optimizer) #Returns the return value of optimizer.step(*args, **kwargs).
+                self.scaler.update() #Updates the scale factor.If any optimizer steps were skipped the scale is multiplied by backoff_factor to reduce it.
+                                #If growth_interval unskipped iterations occurred consecutively, the scale is multiplied by growth_factor to increase it
+                self.scheduler.step() # Update learning rate schedule
+
+            losses = np.mean(losses)
+            corr_preds = correct_predictions.detach().cpu().numpy()
+            accuracy = corr_preds/(len(self.p_train)*self.config.params_classes)
+
+            logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
             
-            logging.info("Applying the train_test_split on the data")
-            x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.3, random_state=RANDOM_STATE)
+            return losses, accuracy    
+            
+        except Exception as e:
+            raise e     
+
+    def validating(self, valid_dataloader):
+        current_function_name = inspect.stack()[0][3]
+        logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")        
+        try:
+            self.model.eval()
+            correct_predictions = 0
+            all_output_probs = []
+
+            for a in valid_dataloader:
+                losses = []
+                ids = a['ids'].to(self.device, non_blocking = True)
+                mask = a['mask'].to(self.device, non_blocking = True)
+                output = self.model(ids, mask)
+                output = output['logits'].squeeze(-1).to(torch.float32)
+                output_probs = torch.sigmoid(output)
+                preds = torch.where(output_probs > 0.5, 1, 0)
+
+                toxic_label = a['toxic_label'].to(self.device, non_blocking = True)
+                loss = self.loss_fn(output, toxic_label)
+                losses.append(loss.item())
+                all_output_probs.extend(output_probs.detach().cpu().numpy())
+
+                correct_predictions += torch.sum(preds == toxic_label)
+                corr_preds = correct_predictions.detach().cpu().numpy()
+
+            losses = np.mean(losses)
+            corr_preds = correct_predictions.detach().cpu().numpy()
+            accuracy = corr_preds/(len(self.p_valid)*self.config.params_classes)
             
             logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
-                        
-            return x_train, x_test, y_train, y_test
+            
+            return losses, accuracy, all_output_probs    
+            
         except Exception as e:
-            raise CustomException(e, sys) from e  
-    
-    def tokenizing_data(self, x_train):
+            raise e        
+
+    def get_model(self):
         current_function_name = inspect.stack()[0][3]
-        logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")
-        try:        
-            tokenizer = Tokenizer(num_words=self.model_trainer_config.MAX_WORDS)
-            logging.info("Applying Tokenization on data")
-            tokenizer.fit_on_texts(x_train)
-            sequences = tokenizer.texts_to_sequences(x_train)
+        logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")        
+        try:
+            self.tokenizer = transformers.BertTokenizer.from_pretrained(
+                self.config.params_pre_trained_model
+            ) 
+                    
+            self.model = transformers.BertForSequenceClassification.from_pretrained(
+                self.data_config.bert_uncased, 
+                num_labels = self.config.params_classes
+            )
             
+            self.model.to(self.device)
+            self.model.train()  
             
-            logging.info(f"Converting text to sequences: {sequences}")
-            sequences_matrix = pad_sequences(sequences, maxlen=self.model_trainer_config.MAX_LEN)
-            logging.info(f"The sequence matrix is: {sequences_matrix}")
+            self.loss_fn = nn.BCEWithLogitsLoss()
+            self.loss_fn.to(self.device)
+            self.scaler = torch.cuda.amp.GradScaler()     
+            self.optimizer = AdamW(
+                self.model.parameters(), 
+                self.config.params_learning_rate,
+                betas = (self.config.params_beta1, self.config.params_beta2), 
+                weight_decay = self.config.params_learning_rate
+            )   
+            
+            self.scheduler = get_linear_schedule_with_warmup(
+                self.optimizer, 
+                self.num_steps, 
+                self.train_steps
+            )
             logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
-                        
-            return sequences_matrix, tokenizer
         except Exception as e:
-            raise CustomException(e, sys) from e  
+            raise e        
     
-    def initiate_model_trainer(self,) -> ModelTrainerArtifacts:
+    def update_model(self):
+        
+        current_function_name = inspect.stack()[0][3]
+        logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")    
+        try:     
+            best_results = []        
+            best_scores = []
+            
+            pre_training_best_score = self.best_score().copy(deep=True)
+            
+            logging.info("Started mlflow Experiment Tracking")
+            
+            mlflow.start_run()
+            
+            for fold in tqdm(range(0,self.config.params_fold)):
+
+                self.get_model()
+
+                best_valid_probs = []
+
+                print("-------------- Fold = " + str(fold) + "-------------")
+
+                for epoch in tqdm(range(self.config.params_epochs)):
+                    print("-------------- Epoch = " + str(epoch) + "-------------")
+
+                    train_loss, train_acc = self.training(self.train_dataloader_list.pop(fold))
+                    valid_loss, valid_acc, valid_probs = self.validating(self.validation_dataloader_list.pop(fold))
+
+
+                    print('train losses: %.4f' %(train_loss), 'train accuracy: %.3f' %(train_acc))
+                    print('valid losses: %.4f' %(valid_loss), 'valid accuracy: %.3f' %(valid_acc))
+
+                    if (valid_loss < self.best_score):
+
+                        self.best_score = valid_loss
+                        print("Found an improved model! :)")
+
+                        state = {
+                            'state_dict': self.model.state_dict(),
+                            'optimizer_dict': self.optimizer.state_dict(),
+                            'best_score': self.best_score
+                        }
+                        
+                        best_results.append(
+                            [
+                                train_loss, 
+                                train_acc, 
+                                valid_loss, 
+                                valid_acc
+                            ]
+                        )
+                        logging.info("saving the model")
+                        self.save_model(state, path=self.best_model_path)
+
+                        best_valid_prob = valid_probs
+                        torch.cuda.memory_summary(device = None, abbreviated = False)
+                    else:
+                        pass
+
+
+                best_scores.append(self.best_score)
+                best_valid_probs.append(best_valid_prob)
+
+            mlflow.log_param('train_steps', self.train_steps)
+            mlflow.log_param('num_steps', self.num_steps)         
+            mlflow.log_param('epoch', self.config.params_epochs)
+            
+            if self.best_score < pre_training_best_score:
+                mlflow.log_metric('train_loss', best_results[-1][0])   
+                mlflow.log_metric('train_acc', best_results[-1][1]) 
+
+                mlflow.log_metric('valid_loss', best_results[-1][2])   
+                mlflow.log_metric('valid_acc', best_results[-1][3])
+            
+            mlflow.end_run()
+            logging.info("Ended mlflow Experiment Tracking")
+            
+            logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
+        except Exception as e:
+            raise e  
+               
+    def initiate_model_trainer(self,):
         current_function_name = inspect.stack()[0][3]
         logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")
         
@@ -69,53 +277,23 @@ class ModelTrainer:
         Method Name :   initiate_model_trainer
         Description :   This function initiates a model trainer steps
         
-        Output      :   Returns model trainer artifact
         On Failure  :   Write an exception log and then raise an exception
         """
-
+        self.random_seed(self.config.params_seed)
         try:
-            x_train,x_test,y_train,y_test = self.splitting_data(csv_path=self.data_transformation_artifacts.transformation_data_file_path)
-            model_architecture = ModelArchitecture()   
-
-            model = model_architecture.get_model()
-
-
-
-            logging.info(f"Xtrain size is : {x_train.shape}")
-
-            logging.info(f"Xtest size is : {x_test.shape}")
-
-            sequences_matrix, tokenizer =self.tokenizing_data(x_train)
-
-
+            
             logging.info("Entered into model training")
-            model.fit(sequences_matrix, y_train, 
-                        batch_size=self.model_trainer_config.BATCH_SIZE, 
-                        epochs = self.model_trainer_config.EPOCH, 
-                        validation_split=self.model_trainer_config.VALIDATION_SPLIT, 
-                        )
+            self.update_model()
             logging.info("Model training finished")
 
             
-            with open('tokenizer.pickle', 'wb') as handle:
-                pickle.dump(tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
-            os.makedirs(self.model_trainer_config.TRAINED_MODEL_DIR,exist_ok=True)
+            logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
 
-
-
-            logging.info("saving the model")
-            model.save(self.model_trainer_config.TRAINED_MODEL_PATH)
-            x_test.to_csv(self.model_trainer_config.X_TEST_DATA_PATH)
-            y_test.to_csv(self.model_trainer_config.Y_TEST_DATA_PATH)
-
-            x_train.to_csv(self.model_trainer_config.X_TRAIN_DATA_PATH)
-
-            model_trainer_artifacts = ModelTrainerArtifacts(
-                trained_model_path = self.model_trainer_config.TRAINED_MODEL_PATH,
-                x_test_path = self.model_trainer_config.X_TEST_DATA_PATH,
-                y_test_path = self.model_trainer_config.Y_TEST_DATA_PATH)
-            logging.info("Returning the ModelTrainerArtifacts")
-            return model_trainer_artifacts
+            return self.best_model_path
 
         except Exception as e:
-            raise CustomException(e, sys) from e
+            raise e
+        
+    @staticmethod
+    def save_model(self, path: Path):
+        torch.save(self.model, path)          

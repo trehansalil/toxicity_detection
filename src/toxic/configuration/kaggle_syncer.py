@@ -18,7 +18,7 @@ KAGGLE_WORKING_PATH=os.path.join(os.getcwd(), dir, sub_dir)
 KAGGLE_SYMLINK='kaggle'
 
 # !umount /kaggle/input/ 2> /dev/null
-shutil.rmtree('/kaggle/input', ignore_errors=True)
+shutil.rmtree(KAGGLE_INPUT_PATH, ignore_errors=True)
 os.makedirs(KAGGLE_INPUT_PATH, 0o777, exist_ok=True)
 os.makedirs(KAGGLE_WORKING_PATH, 0o777, exist_ok=True)
 

@@ -5,10 +5,10 @@ import sys
 from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse
 from fastapi.responses import Response
-from src.toxic.pipeline.prediction_pipeline import PredictionPipeline
-from src.toxic.exception import CustomException
+# from src.toxic.pipeline.prediction_pipeline import PredictionPipeline
+
 from src.toxic.constants import *
-from toxic import logger
+from src.toxic import logger
 
 
 text:str = "What is machine learing?"
@@ -33,15 +33,15 @@ async def training():
     
 
 
-@app.post("/predict")
-async def predict_route(text):
-    try:
+# @app.post("/predict")
+# async def predict_route(text):
+#     try:
 
-        obj = PredictionPipeline()
-        text = obj.run_pipeline(text)
-        return text
-    except Exception as e:
-        raise CustomException(e, sys) from e
+#         obj = PredictionPipeline()
+#         text = obj.run_pipeline(text)
+#         return text
+#     except Exception as e:
+#         raise CustomException(e, sys) from e
     
 
 

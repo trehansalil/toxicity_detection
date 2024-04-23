@@ -1,109 +1,140 @@
 import os
-import sys
-import inspect
-import pandas as pd
-import nltk
+import random
 import re
 import string
-from nltk.corpus import stopwords
-from sklearn.model_selection import train_test_split
-nltk.download('stopwords')
-from toxic.logger import logging
-from toxic.exception import CustomException
-from toxic.entity.config_entity import DataTransformationConfig
-from toxic.entity.artifact_entity import DataTransformationArtifacts, DataIngestionArtifacts, DataValidationArtifacts
+import inspect
+import numpy as np
+
+import torch
+import transformers
+from src.toxic.entity.config_entity import DataTransformationConfig, DataIngestionConfig
+from src.toxic.configuration.bert_data import BertDataSet
+from src.toxic import logging
+from torch.utils.data import DataLoader
+import pandas as pd                                                
 
 
 class DataTransformation:
-    def __init__(self, data_transformation_config: DataTransformationConfig, data_ingestion_artifacts: DataIngestionArtifacts):
-        self.data_transformation_config = data_transformation_config
-        self.data_ingestion_artifacts = data_ingestion_artifacts
-        
-    def imbalance_data_cleaning(self):
-        current_function_name = inspect.stack()[0][3]
-        try:
-            logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")
+    def __init__(
+        self, 
+        config: DataTransformationConfig, 
+        data_config: DataIngestionConfig
+    ):
+        self.config = config
+        self.data_config = data_config
+        self.max_len = self.config.params_max_len  
+        self.tokenizer = transformers.BertTokenizer.from_pretrained(
+            self.config.params_pre_trained_model
+        )         
+           
+    def random_seed(self, SEED):
+        random.seed(SEED)
+        os.environ['PYTHONHASHSEED'] = str(SEED)
+        np.random.seed(SEED)
+        torch.manual_seed(SEED)
+        torch.cuda.manual_seed(SEED)
+        torch.cuda.manual_seed_all(SEED)
+        torch.backends.cudnn.deterministic = True  
+    
+    def clean_text(self, text):
 
-            IMBALANCE_DATA_DF = pd.read_csv(self.data_ingestion_artifacts.imbalance_data_file_path)
-            IMBALANCE_DATA_DF.drop(columns=[self.data_transformation_config.ID], 
-                                   inplace=self.data_transformation_config.INPLACE)
-            
-            logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
-            
-            return IMBALANCE_DATA_DF
-        except Exception as e:
-            raise CustomException(e, sys) from e
-        
-    def raw_data_cleaning(self):
+        text = re.sub('\[.*?\]', '', text)
+        text = re.sub('https?://\S+|www\.\S+', '', text)
+        text = re.sub('<.*?>+', '', text)
+        text = re.sub('[%s]' % re.escape(string.punctuation), '', text)
+        text = re.sub('\n', '', text)
+        text = re.sub('\w*\d\w*', '', text)
+        return text          
+    
+    def read_data(self):
         current_function_name = inspect.stack()[0][3]
+        logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")        
         try:
-            logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")
+            self.random_seed(self.config.params_seed)
+            
+            self.train_path = os.path.join(self.data_config.unzip_dir, 
+                                    self.data_config.train_file)
+            self.labels_path = os.path.join(self.data_config.unzip_dir, 
+                                    self.data_config.labels_file)
+            self.test_path = os.path.join(self.data_config.unzip_dir, 
+                                    self.data_config.test_file)
+            self.submission_path = os.path.join(self.data_config.unzip_dir, 
+                                    self.data_config.sample_sub_file)         
+            
+            self.train = pd.read_csv(self.train_path, nrows = self.config.params_train_subset)
+            self.test = pd.read_csv(self.test_path, nrows = self.config.params_test_subset)
+            self.submission = pd.read_csv(self.submission_path)   
+            # test_labels = pd.read_csv(self.labels_path, nrows = self.config.params_test_subset)    
+            
+            self.train['clean_text'] = self.train['comment_text'].apply(str).apply(lambda x: self.clean_text(x))
+            self.test['clean_text'] = self.test['comment_text'].apply(str).apply(lambda x: self.clean_text(x)) 
 
-            RAW_DATA_DF = pd.read_csv(self.data_ingestion_artifacts.raw_data_file_path)
-            RAW_DATA_DF[self.data_transformation_config.LABEL] = RAW_DATA_DF[self.data_transformation_config.CLASS].map(self.data_transformation_config.MAPPING_CLASS_COL_DICT)
-            RAW_DATA_DF.drop(columns=self.data_transformation_config.DROP_COLUMNS, 
-                                   inplace=self.data_transformation_config.INPLACE)
-            
-            logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
-            
-            return RAW_DATA_DF
+            self.train['kfold'] = self.train.index % self.config.params_fold 
+            logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class") 
         except Exception as e:
-            raise CustomException(e, sys) from e        
-
-    def concatenate_data(self):
+            raise e         
+    
+    def process_data(self, fold):
         current_function_name = inspect.stack()[0][3]
-        logging.info(f"Concatenating the data using the {current_function_name} method of {self.__class__.__name__} class")
+        logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")      
         try:
-            df = pd.concat([self.imbalance_data_cleaning()[[self.data_transformation_config.LABEL, self.data_transformation_config.TWEET]], 
-                            self.raw_data_cleaning()[[self.data_transformation_config.LABEL, self.data_transformation_config.TWEET]]])
-            print(df.head())
             
-            logging.info(f"Returned the concatenated data using the {current_function_name} method of {self.__class__.__name__} class")
+            self.p_train = self.train[self.train["kfold"] != fold].reset_index(drop = True)
+            self.p_valid = self.train[self.train["kfold"] == fold].reset_index(drop = True)
             
-            return df
-        
-        except Exception as e:
-            raise CustomException(e, sys) from e
-        
-    def data_cleaning(self, words):
-        try:
-            stemmer = nltk.SnowballStemmer('english')
-            stopword = set(stopwords.words('english'))
-            words = str(words).lower()
-            words = re.sub('\[.*?\]', '', words)
-            words = re.sub('https?://\S+|www\.\S+', '', words)
-            words = re.sub('<.*?>+', '', words)
-            words = re.sub('[%s]' % re.escape(string.punctuation), '', words)
-            words = re.sub('\n', '', words)
-            words = re.sub('\w*\d\w*', '', words)
-            words = [word for word in words.split(' ') if word not in stopword]
-            words = ' '.join(words)
-            words = [stemmer.stem(word) for word in words.split(' ')]
-            words = ' '.join(words)
-
-            return words
-        
-        except Exception as e:
-            raise CustomException(e, sys) from e    
-        
-    def initiate_data_transformation(self) -> DataTransformationArtifacts:
-        current_function_name = inspect.stack()[0][3]
-        logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")
-        
-        try:
-            df = self.concatenate_data()
-            df[self.data_transformation_config.TWEET] = df[self.data_transformation_config.TWEET].apply(self.data_cleaning)
-            print(self.data_transformation_config.DATA_TRANSFORMATION_ARTIFACTS_DIR)
-            os.makedirs(self.data_transformation_config.DATA_TRANSFORMATION_ARTIFACTS_DIR, exist_ok=True)
-            df.to_csv(self.data_transformation_config.TRANSFORMED_FILE_PATH, index=False, header=True)
+            self.train_steps = int(len(self.p_train)/self.config.params_batch_size * self.config.params_epochs)
+            self.num_steps = int(self.train_steps * 0.1)                   
             
-                        
-            data_transformation_artifacts = DataTransformationArtifacts(
-                transformation_data_file_path = self.data_transformation_config.TRANSFORMED_FILE_PATH, 
+            train_dataset = BertDataSet(
+                self.p_train['clean_text'], 
+                self.p_train[['toxic', 'severe_toxic','obscene', 'threat', 'insult','identity_hate']], 
+                tokenizer=self.tokenizer, 
+                max_len=self.max_len
             )
+            valid_dataset = BertDataSet(
+                self.p_valid['clean_text'], 
+                self.p_valid[['toxic', 'severe_toxic','obscene', 'threat', 'insult','identity_hate']], 
+                tokenizer=self.tokenizer, 
+                max_len=self.max_len
+            )   
             
-            logging.info(f"Returing the DataTransformationArtifacts using {current_function_name} method of {self.__class__.__name__} class")
+            train_dataloader = DataLoader(
+                train_dataset, 
+                batch_size = self.config.params_batch_size, 
+                pin_memory = self.config.params_pin_memory, 
+                num_workers = self.config.params_num_workers, 
+                shuffle = True
+            )
+
+            valid_dataloader = DataLoader(
+                valid_dataset, 
+                batch_size = self.config.params_batch_size, 
+                pin_memory = self.config.params_pin_memory, 
+                num_workers = self.config.params_num_workers, 
+                shuffle = False
+            )  
+            logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
             
-            return data_transformation_artifacts
+            return train_dataloader, valid_dataloader
+        
         except Exception as e:
-            raise CustomException(e, sys) from e 
+            raise e         
+        
+    def initiate_data_transformation(self):
+        current_function_name = inspect.stack()[0][3]
+        logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")  
+        try:
+            self.read_data()
+            train_dataloader_list = []
+            valid_dataloader_list = []
+            
+            for fold in range(self.config.params_fold):
+                train_dataloader, valid_dataloader = self.process_data(fold=fold)
+                train_dataloader_list.append(train_dataloader)
+                valid_dataloader_list.append(valid_dataloader)
+                
+            logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")               
+                
+            return train_dataloader_list, valid_dataloader_list
+        except Exception as e:
+            raise e

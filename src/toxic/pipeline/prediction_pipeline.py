@@ -5,11 +5,10 @@ import keras
 import pickle
 import inspect
 from PIL import Image
-from toxic.logger import logging
-from toxic.constants import *
-from toxic.exception import CustomException
-from keras.utils import pad_sequences
-from toxic.configuration.gcloud_syncer import GCloudSync
+from src.toxic import logging
+from src.toxic.constants import *
+from src.toxic.exception import CustomException
+
 from toxic.components.data_transformation import DataTransformation
 from toxic.entity.config_entity import DataTransformationConfig
 from toxic.entity.artifact_entity import DataIngestionArtifacts

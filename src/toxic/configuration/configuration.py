@@ -1,7 +1,7 @@
 from src.toxic.constants import *
 from src.toxic.utils.common import read_yaml, create_directories
 from src.toxic.entity.config_entity import (DataIngestionConfig,
-                                        PrepareBaseModelConfig,
+                                        DataTransformationConfig,
                                         TrainingConfig,
                                         EvaluationConfig)
 
@@ -74,31 +74,33 @@ class ConfigurationManager:
         return data_ingestion_config
     
 
-    def get_prepare_base_model_config(self) -> PrepareBaseModelConfig:
-        config = self.config.prepare_base_model
+    def get_data_transformation_config(self) -> DataTransformationConfig:
+        config = self.config.data_transformation
         
         create_directories([config.root_dir])
 
-        prepare_base_model_config = PrepareBaseModelConfig(
+        data_transformation_config = DataTransformationConfig(
             root_dir=Path(config.root_dir),
             base_model_path=Path(config.base_model_path),
             updated_base_model_path=Path(config.updated_base_model_path),
-            params_image_size=self.params.IMAGE_SIZE,
-            params_learning_rate=self.params.LEARNING_RATE,
-            params_include_top=self.params.INCLUDE_TOP,
-            params_weights=self.params.WEIGHTS,
-            params_classes=self.params.CLASSES
+            params_batch_size=self.params.BATCH_SIZE,
+            params_epochs=self.params.EPOCHS,
+            params_num_workers=self.params.NUM_WORKERS,
+            params_pin_memory=self.params.PIN_MEMORY,
+            params_fold=self.params.FOLD,
+            params_train_subset=self.params.TRAIN_SUBSET,
+            params_test_subset=self.params.TEST_SUBSET,
+            params_seed=self.params.SEED,
+            params_max_len=self.params.MAX_LEN,
+            params_pre_trained_model=self.params.PRE_TRAINED
         )
 
-        return prepare_base_model_config
+        return data_transformation_config
     
 
 
     def get_training_config(self) -> TrainingConfig:
         training = self.config.training
-        prepare_base_model = self.config.prepare_base_model
-        params = self.params
-        training_data = os.path.join(self.config.data_ingestion.unzip_dir, "Chest-CT-Scan-data")
         create_directories([
             Path(training.root_dir)
         ])
@@ -106,12 +108,22 @@ class ConfigurationManager:
         training_config = TrainingConfig(
             root_dir=Path(training.root_dir),
             trained_model_path=Path(training.trained_model_path),
-            updated_base_model_path=Path(prepare_base_model.updated_base_model_path),
-            training_data=Path(training_data),
-            params_epochs=params.EPOCHS,
-            params_batch_size=params.BATCH_SIZE,
-            params_is_augmentation=params.AUGMENTATION,
-            params_image_size=params.IMAGE_SIZE
+            dagshub_mlflow_remote_uri=training.dagshub_mlflow_remote_uri,
+            params_batch_size=self.params.BATCH_SIZE,
+            params_epochs=self.params.EPOCHS,
+            params_classes=self.params.CLASSES,
+            params_num_workers=self.params.NUM_WORKERS,
+            params_learning_rate=self.params.LEARNING_RATE,
+            params_weight_decay=self.params.WEIGHT_DECAY,
+            params_beta1=self.params.BETA1,
+            params_beta2=self.params.BETA2,
+            params_pin_memory=self.params.PIN_MEMORY,
+            params_fold=self.params.FOLD,
+            params_max_len=self.params.MAX_LEN,
+            params_train_subset=self.params.TRAIN_SUBSET,
+            params_test_subset=self.params.TEST_SUBSET,
+            params_seed=self.params.SEED,
+            params_pre_trained_model=self.params.PRE_TRAINED
         )
 
         return training_config
@@ -125,7 +137,7 @@ class ConfigurationManager:
             training_data="artifacts/data_ingestion/toxicity_detection",
             mlflow_uri="https://dagshub.com/trehansalil/toxicity_detection.mlflow",
             all_params=self.params,
-            params_image_size=self.params.IMAGE_SIZE,
+            params_pre_trained_model=self.params.PRE_TRAINED,
             params_batch_size=self.params.BATCH_SIZE
         )
         return eval_config

@@ -13,12 +13,13 @@ data_ingestion:
 
 
 
-prepare_base_model:
-  root_dir: artifacts/prepare_base_model
-  base_model_path: artifacts/prepare_base_model/base_model.pt
-  updated_base_model_path: artifacts/prepare_base_model/base_model_updated.pt
+data_transformation:
+  root_dir: artifacts/data_transformation
+  base_model_path: artifacts/data_transformation/base_model.pt
+  updated_base_model_path: artifacts/data_transformation/base_model_updated.pt
 
 
 training:
   root_dir: artifacts/training
   trained_model_path: artifacts/training/model.h5
+  dagshub_mlflow_remote_uri: https://dagshub.com/trehansalil/toxicity_detection.mlflow
