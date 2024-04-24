@@ -1,6 +1,8 @@
+import copy
 import os
 import random
 import inspect
+from urllib.parse import urlparse
 import dagshub
 import mlflow
 import numpy as np
@@ -44,11 +46,15 @@ class ModelTrainer:
         
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
-        dagshub.init(
-            repo_owner='trehansalil', 
-            repo_name='toxicity_detection', 
-            mlflow=True
-        )       
+        os.environ['MLFLOW_TRACKING_URI'] = self.remote_server_uri
+        os.environ['MLFLOW_TRACKING_PASSWORD'] = '88855b61c077c3a7538eda58ac1a8a33eb4d1098'
+        os.environ['MLFLOW_TRACKING_USERNAME'] = 'trehansalil'
+        
+        # dagshub.init(
+        #     repo_owner='trehansalil', 
+        #     repo_name='toxicity_detection', 
+        #     mlflow=True
+        # )       
         
         self.train_dataloader_list = train_dataloader_list 
         self.validation_dataloader_list = validation_dataloader_list 
@@ -196,72 +202,75 @@ class ModelTrainer:
             best_results = []        
             best_scores = []
             
-            pre_training_best_score = self.best_score().copy(deep=True)
+            pre_training_best_score = copy.copy(self.best_score)
             
             logging.info("Started mlflow Experiment Tracking")
+            mlflow.set_registry_uri(self.remote_server_uri)
+            tracking_url_type_store = urlparse(mlflow.get_tracking_uri())
+            # mlflow.end_run()
             
-            mlflow.start_run()
+            with mlflow.start_run(nested=True):
             
-            for fold in tqdm(range(0,self.config.params_fold)):
+                for fold in tqdm(range(0,self.config.params_fold)):
 
-                self.get_model()
+                    self.get_model()
 
-                best_valid_probs = []
+                    best_valid_probs = []
 
-                print("-------------- Fold = " + str(fold) + "-------------")
+                    print("-------------- Fold = " + str(fold) + "-------------")
 
-                for epoch in tqdm(range(self.config.params_epochs)):
-                    print("-------------- Epoch = " + str(epoch) + "-------------")
+                    for epoch in tqdm(range(self.config.params_epochs)):
+                        print("-------------- Epoch = " + str(epoch) + "-------------")
 
-                    train_loss, train_acc = self.training(self.train_dataloader_list.pop(fold))
-                    valid_loss, valid_acc, valid_probs = self.validating(self.validation_dataloader_list.pop(fold))
-
-
-                    print('train losses: %.4f' %(train_loss), 'train accuracy: %.3f' %(train_acc))
-                    print('valid losses: %.4f' %(valid_loss), 'valid accuracy: %.3f' %(valid_acc))
-
-                    if (valid_loss < self.best_score):
-
-                        self.best_score = valid_loss
-                        print("Found an improved model! :)")
-
-                        state = {
-                            'state_dict': self.model.state_dict(),
-                            'optimizer_dict': self.optimizer.state_dict(),
-                            'best_score': self.best_score
-                        }
-                        
-                        best_results.append(
-                            [
-                                train_loss, 
-                                train_acc, 
-                                valid_loss, 
-                                valid_acc
-                            ]
-                        )
-                        logging.info("saving the model")
-                        self.save_model(state, path=self.best_model_path)
-
-                        best_valid_prob = valid_probs
-                        torch.cuda.memory_summary(device = None, abbreviated = False)
-                    else:
-                        pass
+                        train_loss, train_acc = self.training(self.train_dataloader_list.pop(fold))
+                        valid_loss, valid_acc, valid_probs = self.validating(self.validation_dataloader_list.pop(fold))
 
 
-                best_scores.append(self.best_score)
-                best_valid_probs.append(best_valid_prob)
+                        print('train losses: %.4f' %(train_loss), 'train accuracy: %.3f' %(train_acc))
+                        print('valid losses: %.4f' %(valid_loss), 'valid accuracy: %.3f' %(valid_acc))
 
-            mlflow.log_param('train_steps', self.train_steps)
-            mlflow.log_param('num_steps', self.num_steps)         
-            mlflow.log_param('epoch', self.config.params_epochs)
-            
-            if self.best_score < pre_training_best_score:
-                mlflow.log_metric('train_loss', best_results[-1][0])   
-                mlflow.log_metric('train_acc', best_results[-1][1]) 
+                        if (valid_loss < self.best_score):
 
-                mlflow.log_metric('valid_loss', best_results[-1][2])   
-                mlflow.log_metric('valid_acc', best_results[-1][3])
-            
+                            self.best_score = valid_loss
+                            print("Found an improved model! :)")
+
+                            state = {
+                                'state_dict': self.model.state_dict(),
+                                'optimizer_dict': self.optimizer.state_dict(),
+                                'best_score': self.best_score
+                            }
+                            
+                            best_results.append(
+                                [
+                                    train_loss, 
+                                    train_acc, 
+                                    valid_loss, 
+                                    valid_acc
+                                ]
+                            )
+                            logging.info("saving the model")
+                            self.save_model(state, path=self.best_model_path)
+
+                            best_valid_prob = valid_probs
+                            torch.cuda.memory_summary(device = None, abbreviated = False)
+                        else:
+                            pass
+
+
+                    best_scores.append(self.best_score)
+                    best_valid_probs.append(best_valid_prob)
+
+                mlflow.log_param('train_steps', self.train_steps)
+                mlflow.log_param('num_steps', self.num_steps)         
+                mlflow.log_param('epoch', self.config.params_epochs)
+                
+                if self.best_score < pre_training_best_score:
+                    mlflow.log_metric('train_loss', best_results[-1][0])   
+                    mlflow.log_metric('train_acc', best_results[-1][1]) 
+
+                    mlflow.log_metric('valid_loss', best_results[-1][2])   
+                    mlflow.log_metric('valid_acc', best_results[-1][3])
+                
             mlflow.end_run()
             logging.info("Ended mlflow Experiment Tracking")
             

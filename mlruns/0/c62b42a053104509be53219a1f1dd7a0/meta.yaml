@@ -1,0 +1,15 @@
+artifact_uri: file:///workspaces/toxicity_detection/mlruns/0/c62b42a053104509be53219a1f1dd7a0/artifacts
+end_time: null
+entry_point_name: ''
+experiment_id: '0'
+lifecycle_stage: active
+run_id: c62b42a053104509be53219a1f1dd7a0
+run_name: stylish-goose-599
+run_uuid: c62b42a053104509be53219a1f1dd7a0
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1713930621382
+status: 1
+tags: []
+user_id: codespace

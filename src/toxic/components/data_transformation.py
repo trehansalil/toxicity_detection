@@ -62,7 +62,8 @@ class DataTransformation:
                                     self.data_config.sample_sub_file)         
             
             self.train = pd.read_csv(self.train_path, nrows = self.config.params_train_subset)
-            self.test = pd.read_csv(self.test_path, nrows = self.config.params_test_subset)
+            self.test = pd.read_csv(self.train_path, nrows = self.config.params_test_subset)
+            self.test = self.test.iloc[self.config.params_train_subset:self.config.params_train_subset+self.config.params_test_subset, :]
             self.submission = pd.read_csv(self.submission_path)   
             # test_labels = pd.read_csv(self.labels_path, nrows = self.config.params_test_subset)    
             
@@ -70,6 +71,22 @@ class DataTransformation:
             self.test['clean_text'] = self.test['comment_text'].apply(str).apply(lambda x: self.clean_text(x)) 
 
             self.train['kfold'] = self.train.index % self.config.params_fold 
+            
+            test_dataset = BertDataSet(
+                self.test['clean_text'], 
+                self.test[['toxic', 'severe_toxic','obscene', 'threat', 'insult','identity_hate']], 
+                tokenizer=self.tokenizer, 
+                max_len=self.max_len
+            ) 
+            
+            self.test_dataloader = DataLoader(
+                test_dataset, 
+                batch_size = self.config.params_batch_size, 
+                pin_memory = self.config.params_pin_memory, 
+                num_workers = self.config.params_num_workers, 
+                shuffle = False
+            )
+            
             logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class") 
         except Exception as e:
             raise e         
@@ -135,6 +152,6 @@ class DataTransformation:
                 
             logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")               
                 
-            return train_dataloader_list, valid_dataloader_list
+            return train_dataloader_list, valid_dataloader_list, self.test_dataloader
         except Exception as e:
             raise e

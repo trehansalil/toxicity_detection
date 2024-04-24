@@ -39,9 +39,9 @@ class TrainingPipeline:
                 data_config = self.data_ingestion_config               
             )
             
-            train_dataloader_list, valid_dataloader_list = data_transformation.initiate_data_transformation()
+            train_dataloader_list, valid_dataloader_list, test_dataloader = data_transformation.initiate_data_transformation()
             logging.info(f"Data Transformation done using the {current_function_name} method of {self.__class__.__name__} class")
-            return train_dataloader_list, valid_dataloader_list
+            return train_dataloader_list, valid_dataloader_list, test_dataloader
         except Exception as e:
             raise e    
 
@@ -109,12 +109,12 @@ class TrainingPipeline:
             self.start_data_ingestion()
 
             logging.info(f"Starting Transformation using the {current_function_name} method of {self.__class__.__name__} class")            
-            train_dataloader_list, valid_dataloader_list = self.start_data_transformation()
+            train_dataloader_list, valid_dataloader_list, test_dataloader = self.start_data_transformation()
             
             logging.info(f"Starting Model Training using the {current_function_name} method of {self.__class__.__name__} class")            
             best_model_path = self.start_model_trainer(train_dataloader_list, valid_dataloader_list)
 
-            # model_evaluation_artifacts = self.start_model_evaluation(best_model_path=best_model_path) 
+            # model_evaluation_artifacts = self.start_model_evaluation(best_model_path=best_model_path, test_dataloader=test_dataloader) 
 
             # if not model_evaluation_artifacts.is_model_accepted:
             #     raise Exception("Trained model is not better than the best model")
