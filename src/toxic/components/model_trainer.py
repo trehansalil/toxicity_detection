@@ -10,7 +10,7 @@ import inspect
 import torch
 from tqdm import tqdm
 from src.toxic import logging
-from src.toxic.entity.config_entity import TrainingConfig
+from src.toxic.entity.config_entity import TrainingConfig, DataIngestionConfig
 from src.toxic.constants import *
 from tqdm import tqdm
 import transformers
@@ -24,13 +24,21 @@ from typing import List
 class ModelTrainer:
     def __init__(
             self, 
+            data_config: DataIngestionConfig,
             model_trainer_config: TrainingConfig, 
             train_dataloader_list: List[DataLoader], 
             validation_dataloader_list: List[DataLoader]
         ):
         self.config = model_trainer_config
+        self.data_config = data_config
         
         self.best_score = 1000
+        self.remote_server_uri = self.config.dagshub_mlflow_remote_uri
+        os.environ['MLFLOW_TRACKING_URI'] = self.remote_server_uri
+        os.environ['MLFLOW_TRACKING_PASSWORD'] = '88855b61c077c3a7538eda58ac1a8a33eb4d1098'
+        os.environ['MLFLOW_TRACKING_USERNAME'] = 'trehansalil'
+                
+        mlflow.autolog()
         
         mlflow.log_param('fold', self.config.params_fold)
         mlflow.log_param('num_workers', self.config.params_num_workers)
@@ -41,14 +49,9 @@ class ModelTrainer:
         mlflow.log_param('best_score', self.best_score)
         mlflow.log_param('Learning_rate', self.config.params_learning_rate)   
         
-        self.max_len = self.config.params_max_len  
-        self.remote_server_uri = self.config.dagshub_mlflow_remote_uri
+        self.max_len = self.config.params_max_len               
         
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        
-        os.environ['MLFLOW_TRACKING_URI'] = self.remote_server_uri
-        os.environ['MLFLOW_TRACKING_PASSWORD'] = '88855b61c077c3a7538eda58ac1a8a33eb4d1098'
-        os.environ['MLFLOW_TRACKING_USERNAME'] = 'trehansalil'
         
         # dagshub.init(
         #     repo_owner='trehansalil', 
@@ -58,6 +61,9 @@ class ModelTrainer:
         
         self.train_dataloader_list = train_dataloader_list 
         self.validation_dataloader_list = validation_dataloader_list 
+        
+        self.train_steps = int(len(self.train_dataloader_list[0])/self.config.params_batch_size * self.config.params_epochs)
+        self.num_steps = int(self.train_steps * 0.1)          
         
         self.best_model_path = os.path.join(self.config.root_dir, "model.pth")
         

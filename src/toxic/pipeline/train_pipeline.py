@@ -57,7 +57,8 @@ class TrainingPipeline:
             model_trainer = ModelTrainer(
                 train_dataloader_list = train_dataloader_list, 
                 validation_dataloader_list = valid_dataloader_list, 
-                model_trainer_config = self.model_trainer_config
+                model_trainer_config = self.model_trainer_config,
+                data_config = self.data_ingestion_config
             )
             
             best_model_path = model_trainer.initiate_model_trainer()
