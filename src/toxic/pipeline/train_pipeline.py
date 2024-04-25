@@ -1,6 +1,6 @@
 import inspect
 import sys
-from src.toxic.logger import logging
+from src.toxic import logging
 from src.toxic.components.data_ingestion import DataIngestion
 from src.toxic.components.data_transformation import DataTransformation
 
