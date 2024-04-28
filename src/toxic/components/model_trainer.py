@@ -226,8 +226,8 @@ class ModelTrainer:
                     for epoch in tqdm(range(self.config.params_epochs)):
                         print("-------------- Epoch = " + str(epoch) + "-------------")
 
-                        train_loss, train_acc = self.training(self.train_dataloader_list.pop(fold))
-                        valid_loss, valid_acc, valid_probs = self.validating(self.validation_dataloader_list.pop(fold))
+                        train_loss, train_acc = self.training(self.train_dataloader_list[fold])
+                        valid_loss, valid_acc, valid_probs = self.validating(self.validation_dataloader_list[fold])
 
 
                         print('train losses: %.4f' %(train_loss), 'train accuracy: %.3f' %(train_acc))
