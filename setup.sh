@@ -1,4 +1,4 @@
 sudo apt update
 sudo apt upgrade
-sudo apt install python3.8-venv
+sudo apt -y install python3.10-venv
 pip install -r requirements.txt
