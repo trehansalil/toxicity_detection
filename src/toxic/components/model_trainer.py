@@ -266,19 +266,6 @@ class ModelTrainer:
                     
                 mlflow.set_tracking_uri(self.remote_server_uri)
                 tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
-                
-                # Model registry does not work with file store
-                if tracking_url_type_store != "file":
-                    # Register the model
-                    # There are other ways to use the Model Registry, which depends on the use case,
-                    # please refer to the doc for more information:
-                    # https://mlflow.org/docs/latest/model-registry.html#api-workflow
-                    mlflow.transformers.log_model(
-                        self.model.s, "model", registered_model_name="ElasticnetWineModel"
-                    )
-                else:
-                    mlflow.transformers.log_model(state, "model")                
-                  
 
                 mlflow.log_param('train_steps', self.train_steps)
                 mlflow.log_param('num_steps', self.num_steps)         
@@ -291,6 +278,17 @@ class ModelTrainer:
                     mlflow.log_metric('valid_loss', best_results[-1][2])   
                     mlflow.log_metric('valid_acc', best_results[-1][3])
                 
+                # Model registry does not work with file store
+                if tracking_url_type_store != "file":
+                    # Register the model
+                    # There are other ways to use the Model Registry, which depends on the use case,
+                    # please refer to the doc for more information:
+                    # https://mlflow.org/docs/latest/model-registry.html#api-workflow
+                    mlflow.pytorch.log_model(
+                        state, "model", registered_model_name="ElasticnetWineModel"
+                    )
+                else:
+                    mlflow.pytorch.log_model(state, "model")                        
 
             logging.info("Ended mlflow Experiment Tracking")
             
