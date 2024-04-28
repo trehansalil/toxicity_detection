@@ -24,4 +24,5 @@ from-root
 fastapi==0.78.0
 uvicorn==0.18.3
 Jinja2==3.1.2
+torchvision
 -e .
