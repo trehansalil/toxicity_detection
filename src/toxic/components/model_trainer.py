@@ -291,7 +291,8 @@ class ModelTrainer:
 
             mlflow.transformers.log_model(
                 transformers_model=components,
-                artifact_path="bert_model",
+                artifact_path="text_classifier",
+                task='text-classification'
             )
                 
 
