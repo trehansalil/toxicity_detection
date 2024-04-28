@@ -27,7 +27,9 @@ class ModelTrainer:
             data_config: DataIngestionConfig,
             model_trainer_config: TrainingConfig, 
             train_dataloader_list: List[DataLoader], 
-            validation_dataloader_list: List[DataLoader]
+            validation_dataloader_list: List[DataLoader],
+            train_steps: int,
+            num_steps: int
         ):
         self.config = model_trainer_config
         self.data_config = data_config
@@ -51,8 +53,8 @@ class ModelTrainer:
         self.train_dataloader_list = train_dataloader_list 
         self.validation_dataloader_list = validation_dataloader_list 
         
-        self.train_steps = int(len(self.train_dataloader_list[0])/self.config.params_batch_size * self.config.params_epochs)
-        self.num_steps = int(self.train_steps * 0.1)          
+        self.train_steps = train_steps
+        self.num_steps = num_steps 
         
         self.best_model_path = os.path.join(self.config.root_dir, "model.pth")
         

@@ -152,6 +152,6 @@ class DataTransformation:
                 
             logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")               
                 
-            return train_dataloader_list, valid_dataloader_list, self.test_dataloader
+            return train_dataloader_list, valid_dataloader_list, self.test_dataloader, self.train_steps, self.num_steps
         except Exception as e:
             raise e
