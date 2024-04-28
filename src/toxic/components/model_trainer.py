@@ -109,7 +109,7 @@ class ModelTrainer:
 
             losses = np.mean(losses)
             corr_preds = correct_predictions.detach().cpu().numpy()
-            accuracy = corr_preds/(len(train_dataloader)*self.config.params_classes)
+            accuracy = corr_preds/(len(self.p_train)*self.config.params_classes)
 
             logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
             
@@ -145,7 +145,7 @@ class ModelTrainer:
 
             losses = np.mean(losses)
             corr_preds = correct_predictions.detach().cpu().numpy()
-            accuracy = corr_preds/(len(valid_dataloader)*self.config.params_classes)
+            accuracy = corr_preds/(len(self.p_valid)*self.config.params_classes)
             
             logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
             
