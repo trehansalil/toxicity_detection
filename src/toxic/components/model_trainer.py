@@ -324,5 +324,5 @@ class ModelTrainer:
             raise e
         
     @staticmethod
-    def save_model(self, path: Path):
-        torch.save(self.model, path)          
+    def save_model(model_dict, path: Path):
+        torch.save(model_dict, path)          
