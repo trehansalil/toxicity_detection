@@ -256,7 +256,7 @@ class ModelTrainer:
                             self.save_model(state, path=self.best_model_path)
 
                             best_valid_prob = valid_probs
-                            torch.cuda.memory_summary(device = None, abbreviated = False)
+                            # torch.cuda.memory_summary(device = None, abbreviated = False)
                         else:
                             pass
 
