@@ -56,6 +56,10 @@ class ModelTrainer:
         self.train_steps = train_steps
         self.num_steps = num_steps 
         
+        self.loss_fn = nn.BCEWithLogitsLoss()
+        self.loss_fn.to(self.device)      
+        self.scaler = torch.cuda.amp.GradScaler()  
+        
         self.best_model_path = os.path.join(self.config.root_dir, "model.pth")
         
     def random_seed(self, SEED):
@@ -170,11 +174,7 @@ class ModelTrainer:
             )
             
             self.model.to(self.device)
-            self.model.train()  
-            
-            self.loss_fn = nn.BCEWithLogitsLoss()
-            self.loss_fn.to(self.device)
-            self.scaler = torch.cuda.amp.GradScaler()     
+            # self.model.train()     
             self.optimizer = AdamW(
                 self.model.parameters(), 
                 self.config.params_learning_rate,
