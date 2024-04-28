@@ -28,8 +28,8 @@ class ModelTrainer:
             model_trainer_config: TrainingConfig, 
             train_dataloader_list: List[DataLoader], 
             validation_dataloader_list: List[DataLoader],
-            train_steps: int,
-            num_steps: int
+            n_train: int,
+            n_val: int
         ):
         self.config = model_trainer_config
         self.data_config = data_config
@@ -53,8 +53,11 @@ class ModelTrainer:
         self.train_dataloader_list = train_dataloader_list 
         self.validation_dataloader_list = validation_dataloader_list 
         
-        self.train_steps = train_steps
-        self.num_steps = num_steps 
+        self.n_train = n_train
+        self.n_val = n_val
+        
+        self.train_steps = int(self.n_train/self.config.params_batch_size * self.config.params_epochs)
+        self.num_steps = int(self.train_steps * 0.1)    
         
         self.loss_fn = nn.BCEWithLogitsLoss()
         self.loss_fn.to(self.device)      
@@ -115,7 +118,7 @@ class ModelTrainer:
 
             losses = np.mean(losses)
             corr_preds = correct_predictions.detach().cpu().numpy()
-            accuracy = corr_preds/(len(train_dataloader)*self.config.params_classes)
+            accuracy = corr_preds/(self.n_train*self.config.params_classes)
 
             logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
             
@@ -151,7 +154,7 @@ class ModelTrainer:
 
             losses = np.mean(losses)
             corr_preds = correct_predictions.detach().cpu().numpy()
-            accuracy = corr_preds/(len(valid_dataloader)*self.config.params_classes)
+            accuracy = corr_preds/(len(self.n_val)*self.config.params_classes)
             
             logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
             

@@ -97,10 +97,7 @@ class DataTransformation:
         try:
             
             self.p_train = self.train[self.train["kfold"] != fold].reset_index(drop = True)
-            self.p_valid = self.train[self.train["kfold"] == fold].reset_index(drop = True)
-            
-            self.train_steps = int(len(self.p_train)/self.config.params_batch_size * self.config.params_epochs)
-            self.num_steps = int(self.train_steps * 0.1)                   
+            self.p_valid = self.train[self.train["kfold"] == fold].reset_index(drop = True)               
             
             train_dataset = BertDataSet(
                 self.p_train['clean_text'], 
@@ -152,6 +149,6 @@ class DataTransformation:
                 
             logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")               
                 
-            return train_dataloader_list, valid_dataloader_list, self.test_dataloader, self.train_steps, self.num_steps
+            return train_dataloader_list, valid_dataloader_list, self.test_dataloader, len(self.p_train), len(self.p_valid)
         except Exception as e:
             raise e
