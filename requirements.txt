@@ -1,6 +1,6 @@
 gdown
 dvc
-mlflow==2.2.2
+mlflow==2.12.1
 notebook
 matplotlib
 python-box==6.0.2
