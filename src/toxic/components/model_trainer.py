@@ -37,17 +37,6 @@ class ModelTrainer:
         os.environ['MLFLOW_TRACKING_URI'] = self.remote_server_uri
         os.environ['MLFLOW_TRACKING_PASSWORD'] = '88855b61c077c3a7538eda58ac1a8a33eb4d1098'
         os.environ['MLFLOW_TRACKING_USERNAME'] = 'trehansalil'
-                
-        mlflow.autolog()
-        
-        mlflow.log_param('fold', self.config.params_fold)
-        mlflow.log_param('num_workers', self.config.params_num_workers)
-        mlflow.log_param('pin_memory', self.config.params_pin_memory)
-        mlflow.log_param('beta1', self.config.params_beta1)
-        mlflow.log_param('beta2', self.config.params_beta2)
-        mlflow.log_param('weight_decay', self.config.params_weight_decay)
-        mlflow.log_param('best_score', self.best_score)
-        mlflow.log_param('Learning_rate', self.config.params_learning_rate)   
         
         self.max_len = self.config.params_max_len               
         
@@ -211,11 +200,20 @@ class ModelTrainer:
             pre_training_best_score = copy.copy(self.best_score)
             
             logging.info("Started mlflow Experiment Tracking")
-            mlflow.set_registry_uri(self.remote_server_uri)
-            tracking_url_type_store = urlparse(mlflow.get_tracking_uri())
-            # mlflow.end_run()
             
-            with mlflow.start_run(nested=True):
+            mlflow.autolog()
+            
+            with mlflow.start_run():
+                
+                
+                mlflow.log_param('fold', self.config.params_fold)
+                mlflow.log_param('num_workers', self.config.params_num_workers)
+                mlflow.log_param('pin_memory', self.config.params_pin_memory)
+                mlflow.log_param('beta1', self.config.params_beta1)
+                mlflow.log_param('beta2', self.config.params_beta2)
+                mlflow.log_param('weight_decay', self.config.params_weight_decay)
+                mlflow.log_param('best_score', self.best_score)
+                mlflow.log_param('Learning_rate', self.config.params_learning_rate)                   
             
                 for fold in tqdm(range(0,self.config.params_fold)):
 
@@ -265,6 +263,22 @@ class ModelTrainer:
 
                     best_scores.append(self.best_score)
                     best_valid_probs.append(best_valid_prob)
+                    
+                mlflow.set_tracking_uri(self.remote_server_uri)
+                tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
+                
+                # Model registry does not work with file store
+                if tracking_url_type_store != "file":
+                    # Register the model
+                    # There are other ways to use the Model Registry, which depends on the use case,
+                    # please refer to the doc for more information:
+                    # https://mlflow.org/docs/latest/model-registry.html#api-workflow
+                    mlflow.transformers.log_model(
+                        self.model.s, "model", registered_model_name="ElasticnetWineModel"
+                    )
+                else:
+                    mlflow.transformers.log_model(state, "model")                
+                  
 
                 mlflow.log_param('train_steps', self.train_steps)
                 mlflow.log_param('num_steps', self.num_steps)         
@@ -277,7 +291,7 @@ class ModelTrainer:
                     mlflow.log_metric('valid_loss', best_results[-1][2])   
                     mlflow.log_metric('valid_acc', best_results[-1][3])
                 
-            mlflow.end_run()
+
             logging.info("Ended mlflow Experiment Tracking")
             
             logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
