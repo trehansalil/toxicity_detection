@@ -5,23 +5,14 @@ import inspect
 import pandas as pd
 import numpy as np
 import inspect
-from toxic.logger import logging
-from toxic.exception import CustomException
-from toxic.entity.config_entity import ModelEvaluationConfig
-from toxic.entity.artifact_entity import ModelTrainerArtifacts, ModelEvaluationArtifacts, DataTransformationArtifacts
-from keras.preprocessing.text import Tokenizer
-import tensorflow as tf
-from keras.utils import pad_sequences
-from toxic.ml.model import ModelArchitecture
-from toxic.constants import *
-from toxic.configuration.gcloud_syncer import GCloudSync
+from src.toxic import logging
+from src.toxic.entity.config_entity import ModelEvaluationConfig
+from src.toxic.constants import *
 from sklearn.metrics import confusion_matrix
 
 class ModelEvaluation:
     def __init__(self, 
-                 model_evaluation_config: ModelEvaluationConfig, 
-                 model_trainer_artifacts: ModelTrainerArtifacts,
-                 data_transformation_artifacts: DataTransformationArtifacts):
+                 model_evaluation_config: ModelEvaluationConfig):
         
         """
         :param model_evaluation_config: Configuration for model evaluation            
@@ -31,35 +22,6 @@ class ModelEvaluation:
         """
 
         self.model_evaluation_config = model_evaluation_config
-        self.model_trainer_artifacts = model_trainer_artifacts
-        self.data_transformation_artifacts = data_transformation_artifacts
-        self.gcloud = GCloudSync()
-
-
-    
-    def get_best_model_from_gcloud(self) -> str:
-        """
-        :return: Fetch best model from gcloud storage and store inside best model directory path
-        """
-        current_function_name = inspect.stack()[0][3]
-        logging.info(f"Entered the {current_function_name} method of {self.__class__.__name__} class")        
-        try:
-            os.makedirs(self.model_evaluation_config.BEST_MODEL_DIR_PATH, exist_ok=True)
-
-            self.gcloud.sync_folder_from_gcloud(self.model_evaluation_config.BUCKET_NAME,
-                                                self.model_evaluation_config.MODEL_NAME,
-                                                self.model_evaluation_config.BEST_MODEL_DIR_PATH)
-
-            best_model_path = os.path.join(self.model_evaluation_config.BEST_MODEL_DIR_PATH,
-                                           self.model_evaluation_config.MODEL_NAME)
-            logging.info(f"Exited the {current_function_name} method of {self.__class__.__name__} class")
-            
-            return best_model_path
-        
-        except Exception as e:
-            raise CustomException(e, sys) from e 
-        
-
     
     def evaluate(self):
         """

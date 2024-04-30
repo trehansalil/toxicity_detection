@@ -3,7 +3,7 @@ from src.toxic.utils.common import read_yaml, create_directories
 from src.toxic.entity.config_entity import (DataIngestionConfig,
                                         DataTransformationConfig,
                                         TrainingConfig,
-                                        EvaluationConfig)
+                                        ModelEvaluationConfig)
 
 import numpy as np
 import pandas as pd
@@ -131,11 +131,11 @@ class ConfigurationManager:
 
 
 
-    def get_evaluation_config(self) -> EvaluationConfig:
-        eval_config = EvaluationConfig(
-            path_of_model="artifacts/training/best_model.pt",
-            training_data="artifacts/data_ingestion/toxicity_detection",
-            mlflow_uri="https://dagshub.com/trehansalil/toxicity_detection.mlflow",
+    def get_evaluation_config(self) -> ModelEvaluationConfig:
+        training = self.config.training
+        eval_config = ModelEvaluationConfig(
+            path_of_model=Path(os.path.join(training.root_dir, training.trained_model_path)),
+            mlflow_uri=training.dagshub_mlflow_remote_uri,
             all_params=self.params,
             params_pre_trained_model=self.params.PRE_TRAINED,
             params_batch_size=self.params.BATCH_SIZE

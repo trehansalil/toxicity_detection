@@ -3,8 +3,9 @@ import os
 import random
 import inspect
 from urllib.parse import urlparse
-import dagshub
+
 import mlflow
+from mlflow.models import infer_signature
 import numpy as np
 import inspect
 import torch
@@ -206,11 +207,18 @@ class ModelTrainer:
             
             logging.info("Started mlflow Experiment Tracking")
             
-            mlflow.autolog()
+            # mlflow.autolog()
+            # Set a tag that we can use to remind ourselves what this run was for
+            mlflow.set_tag("Training Info", "Basic LR model for iris data")
+
+            # Infer the model signature
+            signature = infer_signature(self.train_dataloader_list[0])
             
+            mlflow.set_tracking_uri(self.remote_server_uri)
+            tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme            
+        
             with mlflow.start_run():
-                
-                
+            
                 mlflow.log_param('fold', self.config.params_fold)
                 mlflow.log_param('num_workers', self.config.params_num_workers)
                 mlflow.log_param('pin_memory', self.config.params_pin_memory)
@@ -233,7 +241,6 @@ class ModelTrainer:
 
                         train_loss, train_acc = self.training(self.train_dataloader_list[fold])
                         valid_loss, valid_acc, valid_probs = self.validating(self.validation_dataloader_list[fold])
-
 
                         print('train losses: %.4f' %(train_loss), 'train accuracy: %.3f' %(train_acc))
                         print('valid losses: %.4f' %(valid_loss), 'valid accuracy: %.3f' %(valid_acc))
@@ -273,9 +280,6 @@ class ModelTrainer:
 
                     best_scores.append(self.best_score)
                     best_valid_probs.append(best_valid_prob)
-                    
-                mlflow.set_tracking_uri(self.remote_server_uri)
-                tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
 
                 mlflow.log_param('train_steps', self.train_steps)
                 mlflow.log_param('num_steps', self.num_steps)         
@@ -289,12 +293,13 @@ class ModelTrainer:
                     mlflow.log_metric('valid_acc', best_results[-1][3])
                 
 
-            mlflow.transformers.log_model(
-                transformers_model=components,
-                artifact_path="text_classifier",
-                task='text-classification'
-            )
-                
+                mlflow.transformers.log_model(
+                    transformers_model=components,
+                    artifact_path="text_classifier",
+                    task='text-classification'
+                )
+            
+            mlflow.end_run()
 
             logging.info("Ended mlflow Experiment Tracking")
             

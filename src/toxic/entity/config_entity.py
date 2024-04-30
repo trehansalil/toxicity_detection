@@ -58,9 +58,8 @@ class TrainingConfig:
 
 
 @dataclass(frozen=True)
-class EvaluationConfig:
+class ModelEvaluationConfig:
     path_of_model: Path
-    training_data: Path
     all_params: dict
     mlflow_uri: str
     params_pre_trained_model: str
